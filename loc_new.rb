@@ -66,11 +66,12 @@ CSV.open(summary_file, "w") do |summary|
     _output, status = Open3.capture2e 'git', 'clone', '--depth', '1', '--quiet', clone_url, destination
     next unless status.exitstatus.zero?
 
-    languages = '--include-lang="Rust,Elixir,Python,Elm,TypeScript,JavaScript,Kotlin,Swift,PHP,Twig"'
-    _output, _status = cloc destination, '--quiet', '--csv', languages, "--report-file=#{report_file}"
+    _output, _status = cloc destination, '--quiet', '--csv', "--report-file=#{report_file}"
 
+    valid_languages = ["Rust","Elixir","Python","Elm","TypeScript","JavaScript","Kotlin","Swift","PHP"]
     lines = CSV.read(report_file, headers: true)
-    lang_lines = lines.select { |row| row['language'] != 'SUM' }
+    lang_lines = lines.select { |row| valid_languages.include?(row['language']) }
+
     most_used = lang_lines.sort_by{|line| line['code'].to_i}.reverse.first
 
     dockerfile_name = "#{destination}/Dockerfile"
@@ -83,7 +84,7 @@ CSV.open(summary_file, "w") do |summary|
     end
 
 
-    summary << [repo.name, most_used["code"], dockerfile_version] if status.exitstatus.zero?
+    summary << [repo.name, most_used["code"], most_used["language"], dockerfile_version] if status.exitstatus.zero?
   end
 end
 puts 'Done.'
